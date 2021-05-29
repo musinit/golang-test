@@ -2,9 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/gorilla/mux"
@@ -91,6 +93,10 @@ func deleteBook(w http.ResponseWriter, r *http.Request) {
 func main() {
 	// Init router
 	r := mux.NewRouter()
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8000"
+	}
 
 	// Hardcoded data - @todo: add database
 	books = append(books, Book{ID: "1", Isbn: "438227", Title: "Book One", Author: &Author{Firstname: "John", Lastname: "Doe"}})
@@ -103,8 +109,9 @@ func main() {
 	r.HandleFunc("/books/{id}", updateBook).Methods("PUT")
 	r.HandleFunc("/books/{id}", deleteBook).Methods("DELETE")
 
+	fmt.Printf("sobaken-vigulyaken starting no port: %s...", port)
 	// Start server
-	log.Fatal(http.ListenAndServe(":8000", r))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), r))
 }
 
 // Request sample
