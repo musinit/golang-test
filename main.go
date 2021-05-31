@@ -26,23 +26,63 @@ type Author struct {
 	Lastname  string `json:"lastname"`
 }
 
+// User struct
+type User struct {
+	Id      int      `json:"id"`
+	Name    string   `json:"name"`
+	Surname string   `json:"surname"`
+	Phone   string   `json:"phone"`
+	Email   string   `json:"email"`
+	Address *Address `json:"address"`
+	Pets    *[]Pet   `json:"pets"`
+}
+
+// Address struct
+type Address struct {
+	Id        int    `json:"id"`
+	DwellerId int    `json:"dwellerId"`
+	Country   string `json:"country"`
+	City      string `json:"city"`
+	Street    string `json:"street"`
+	House     string `json:"house"`
+	Building  string `json:"building"`
+	Flat      string `json:"flat"`
+}
+
+// Pet struct
+type Pet struct {
+	Id      int    `json:"id"`
+	OwnerId int    `json:"ownerId"`
+	Type    string `json:"petType"`
+	Name    string `json:"petName"`
+	Sex     string `json:"petSex"`
+	Age     int    `json:"petAge"`
+}
+
 // Init books var as a slice Book struct
 var books []Book
+
+// Init users var as a slice User struct
+var users []User
+
+//var addresses []Address
+//var pets []Pet
 
 // Get all books
 func getBooks(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
-	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token")
-	w.Header().Set("Access-Control-Allow-Credentials", "true") // Required for cookies, authorization headers with HTTPS
+	//w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	//w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token")
+	//w.Header().Set("Access-Control-Allow-Credentials", "true") // Required for cookies, authorization headers with HTTPS
 	json.NewEncoder(w).Encode(books)
 }
 
 // Get single book
 func getBook(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	params := mux.Vars(r) // Gets params
+	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
+	params := mux.Vars(r)                              // Gets params
 	// Loop through books and find one with the id from the params
 	for _, item := range books {
 		if item.ID == params["id"] {
@@ -93,6 +133,28 @@ func deleteBook(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(books)
 }
 
+// Get all books
+func getUsers(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
+	json.NewEncoder(w).Encode(users)
+}
+
+// Get single user
+func getUser(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
+	params := mux.Vars(r)                              // Gets params
+	// Loop through books and find one with the id from the params
+	for _, item := range users {
+		if strconv.Itoa(item.Id) == params["id"] {
+			json.NewEncoder(w).Encode(item)
+			return
+		}
+	}
+	json.NewEncoder(w).Encode(&User{})
+}
+
 // Main function
 func main() {
 	// Init router
@@ -106,6 +168,25 @@ func main() {
 	books = append(books, Book{ID: "1", Isbn: "438227", Title: "Book One", Author: &Author{Firstname: "John", Lastname: "Doe"}})
 	books = append(books, Book{ID: "2", Isbn: "454555", Title: "Book Two", Author: &Author{Firstname: "Steve", Lastname: "Smith"}})
 
+	// Hardcoded data
+	//var address_user0 Address
+	//var address_user1 Address
+	var pets_user0 []Pet
+	var pets_user1 []Pet
+	var pets_user2 []Pet
+
+	address_user0 := Address{Id: 0, DwellerId: 0, Country: "Россия", City: "Москва", Street: "Петушиная", House: "69", Flat: "420"}
+	address_user2 := Address{Id: 1, DwellerId: 2, Country: "Russia", City: "Moscow", Street: "Tverskaya", House: "420", Flat: "69"}
+
+	pets_user0 = append(pets_user0, Pet{Id: 0, OwnerId: 0, Type: "cat", Name: "Владимир", Sex: "male", Age: 1})
+	pets_user0 = append(pets_user0, Pet{Id: 1, OwnerId: 0, Type: "dog", Name: "Джереми", Sex: "male", Age: 4})
+	pets_user1 = append(pets_user1, Pet{Id: 2, OwnerId: 1, Type: "crocodile", Name: "Антон", Sex: "male", Age: 35})
+	pets_user2 = append(pets_user2, Pet{Id: 3, OwnerId: 2, Type: "indricotherium", Name: "Musinit", Sex: "male", Age: 10})
+
+	users = append(users, User{Id: 0, Name: "Ицхак", Surname: "Пинтосевич", Phone: "+79123456789", Email: "test@mail.ru", Address: &address_user0, Pets: &pets_user0})
+	users = append(users, User{Id: 1, Name: "Александр", Surname: "Тестовый", Phone: "+79150554477", Pets: &pets_user1})
+	users = append(users, User{Id: 2, Name: "Oleg", Surname: "Musin", Phone: "+79150554477", Address: &address_user2, Pets: &pets_user2})
+
 	// Route handles & endpoints
 	r.HandleFunc("/books", getBooks).Methods("GET")
 	r.HandleFunc("/books/{id}", getBook).Methods("GET")
@@ -113,7 +194,21 @@ func main() {
 	r.HandleFunc("/books/{id}", updateBook).Methods("PUT")
 	r.HandleFunc("/books/{id}", deleteBook).Methods("DELETE")
 
-	fmt.Printf("sobaken-vigulyaken starting no port: %s...", port)
+	r.HandleFunc("/users", getUsers).Methods("GET")
+	r.HandleFunc("/users/{id}", getUser).Methods("GET")
+
+	//Print port info
+	//fmt.Printf("sobaken-vigulyaken starting on port: %s...", port)
+
+	// Print Json with indents, the pretty way:
+	/*
+		prettyJSON, err := json.MarshalIndent(users, "", "    ")
+		if err != nil {
+			log.Fatal("Failed to generate json", err)
+		}
+		fmt.Printf("%s\n", string(prettyJSON))
+	*/
+
 	// Start server
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), r))
 }
