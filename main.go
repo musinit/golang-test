@@ -39,24 +39,24 @@ type User struct {
 
 // Address struct
 type Address struct {
-	Id        int    `json:"id"`
-	DwellerId int    `json:"dwellerId"`
-	Country   string `json:"country"`
-	City      string `json:"city"`
-	Street    string `json:"street"`
-	House     string `json:"house"`
-	Building  string `json:"building"`
-	Flat      string `json:"flat"`
+	Id       int    `json:"id"`
+	OwnerId  int    `json:"ownerId"`
+	Country  string `json:"country"`
+	City     string `json:"city"`
+	Street   string `json:"street"`
+	House    string `json:"house"`
+	Building string `json:"building"`
+	Flat     string `json:"flat"`
 }
 
 // Pet struct
 type Pet struct {
 	Id      int    `json:"id"`
 	OwnerId int    `json:"ownerId"`
-	Type    string `json:"petType"`
-	Name    string `json:"petName"`
-	Sex     string `json:"petSex"`
-	Age     int    `json:"petAge"`
+	Type    string `json:"type"`
+	Name    string `json:"name"`
+	Sex     string `json:"sex"`
+	Age     int    `json:"age"`
 }
 
 // Init books var as a slice Book struct
@@ -82,7 +82,8 @@ func getBooks(w http.ResponseWriter, r *http.Request) {
 func getBook(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
-	params := mux.Vars(r)                              // Gets params
+
+	params := mux.Vars(r) // Gets params
 	// Loop through books and find one with the id from the params
 	for _, item := range books {
 		if item.ID == params["id"] {
@@ -133,10 +134,11 @@ func deleteBook(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(books)
 }
 
-// Get all books
+// Get all users
 func getUsers(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
+
 	json.NewEncoder(w).Encode(users)
 }
 
@@ -144,7 +146,8 @@ func getUsers(w http.ResponseWriter, r *http.Request) {
 func getUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
-	params := mux.Vars(r)                              // Gets params
+
+	params := mux.Vars(r) // Gets params
 	// Loop through books and find one with the id from the params
 	for _, item := range users {
 		if strconv.Itoa(item.Id) == params["id"] {
@@ -153,6 +156,59 @@ func getUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	json.NewEncoder(w).Encode(&User{})
+}
+
+// Add new user
+func createUser(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+
+	var user User
+	_ = json.NewDecoder(r.Body).Decode(&user)
+	user.Id = rand.Intn(100000000) // Mock ID - not safe //@TODO: Change for GUID
+	users = append(users, user)
+	json.NewEncoder(w).Encode(user)
+}
+
+// Update user
+func updateUser(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+
+	params := mux.Vars(r)
+	for index, item := range users {
+		if strconv.Itoa(item.Id) == params["id"] {
+			users = append(users[:index], users[index+1:]...)
+			var user User
+			_ = json.NewDecoder(r.Body).Decode(&user)
+
+			var err error
+			user.Id, err = strconv.Atoi(params["id"])
+			if err == nil {
+				users = append(users, user)
+				json.NewEncoder(w).Encode(user)
+			}
+			return
+		}
+	}
+}
+
+// Delete user
+func deleteUser(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+
+	params := mux.Vars(r)
+	for index, item := range users {
+		if strconv.Itoa(item.Id) == params["Id"] {
+			users = append(users[:index], users[index+1:]...)
+			break
+		}
+	}
+	json.NewEncoder(w).Encode(users)
 }
 
 // Main function
@@ -175,8 +231,8 @@ func main() {
 	var pets_user1 []Pet
 	var pets_user2 []Pet
 
-	address_user0 := Address{Id: 0, DwellerId: 0, Country: "Россия", City: "Москва", Street: "Петушиная", House: "69", Flat: "420"}
-	address_user2 := Address{Id: 1, DwellerId: 2, Country: "Russia", City: "Moscow", Street: "Tverskaya", House: "420", Flat: "69"}
+	address_user0 := Address{Id: 0, OwnerId: 0, Country: "Россия", City: "Москва", Street: "Петушиная", House: "69", Flat: "420"}
+	address_user2 := Address{Id: 1, OwnerId: 2, Country: "Russia", City: "Moscow", Street: "Tverskaya", House: "420", Flat: "69"}
 
 	pets_user0 = append(pets_user0, Pet{Id: 0, OwnerId: 0, Type: "cat", Name: "Владимир", Sex: "male", Age: 1})
 	pets_user0 = append(pets_user0, Pet{Id: 1, OwnerId: 0, Type: "dog", Name: "Джереми", Sex: "male", Age: 4})
@@ -196,6 +252,9 @@ func main() {
 
 	r.HandleFunc("/users", getUsers).Methods("GET")
 	r.HandleFunc("/users/{id}", getUser).Methods("GET")
+	r.HandleFunc("/users", createUser).Methods("POST")
+	r.HandleFunc("/users/{id}", updateUser).Methods("PUT")
+	r.HandleFunc("/users/{id}", deleteUser).Methods("DELETE")
 
 	//Print port info
 	//fmt.Printf("sobaken-vigulyaken starting on port: %s...", port)
@@ -219,3 +278,15 @@ func main() {
 // 	"title":"Book Three",
 // 	"author":{"firstname":"Harry","lastname":"White"}
 // }
+
+//Request sample: POST/users
+/*
+{
+    "name": "Misha",
+    "surname": "Smolin",
+    "phone": "+79162712542",
+    "email": "kokus@mail.ru",
+    "address": null,
+    "pets": null
+}
+*/
