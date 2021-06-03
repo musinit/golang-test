@@ -146,6 +146,7 @@ func getUsers(w http.ResponseWriter, r *http.Request) {
 func getUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 
 	params := mux.Vars(r) // Gets params
 	// Loop through books and find one with the id from the params
@@ -175,7 +176,7 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 func updateUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
-	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	w.Header().Set("Access-Control-Allow-Methods", "PUT, POST, GET, OPTIONS, DELETE")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token")
 	w.Header().Set("Access-Control-Allow-Credentials", "true") // Required for cookies, authorization headers with HTTPS
 
@@ -211,6 +212,25 @@ func deleteUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	json.NewEncoder(w).Encode(users)
+}
+
+// Get single user
+func getPets(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
+	//w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+
+	params := mux.Vars(r) // Gets params
+	// Loop through books and find one with the id from the params
+
+	//потом надо животных отдельно просто хранить, а в структуре юзера - указатель
+	for _, user := range users {
+		if strconv.Itoa(user.Id) == params["userId"] {
+			json.NewEncoder(w).Encode(user.Pets)
+			return
+		}
+	}
+	json.NewEncoder(w).Encode(&User{})
 }
 
 // Main function
@@ -257,6 +277,7 @@ func main() {
 	r.HandleFunc("/users", createUser).Methods("POST")
 	r.HandleFunc("/users/{id}", updateUser).Methods("PUT")
 	r.HandleFunc("/users/{id}", deleteUser).Methods("DELETE")
+	r.HandleFunc("/pets/{userId}", getPets).Methods("GET")
 
 	//Print port info
 	//fmt.Printf("sobaken-vigulyaken starting on port: %s...", port)
