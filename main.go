@@ -35,6 +35,7 @@ type User struct {
 	Email   string   `json:"email"`
 	Address *Address `json:"address"`
 	Pets    *[]Pet   `json:"pets"`
+	PetIds  []int    `json:"petIds"`
 }
 
 // Address struct
@@ -64,6 +65,9 @@ var books []Book
 
 // Init users var as a slice User struct
 var users []User
+
+// Init users var as a slice Pet struct
+var pets []Pet
 
 //var addresses []Address
 //var pets []Pet
@@ -214,8 +218,18 @@ func deleteUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(users)
 }
 
-// Get single user
+// Get all pets
 func getPets(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
+
+	json.NewEncoder(w).Encode(pets)
+}
+
+// Get all user's pets
+
+/*
+func getUserPets(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
 	//w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
@@ -231,6 +245,101 @@ func getPets(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	json.NewEncoder(w).Encode(&User{})
+}
+*/
+
+func getUserPets(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
+	//w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+
+	params := mux.Vars(r) // Gets params
+	// Loop through books and find one with the id from the params
+
+	var _pets []Pet
+
+	for _, pet := range pets {
+		if strconv.Itoa(pet.OwnerId) == params["userId"] {
+			_pets = append(_pets, pet)
+		}
+	}
+	json.NewEncoder(w).Encode(_pets)
+}
+
+/*
+func getPet(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
+	//w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+
+	params := mux.Vars(r) // Gets params
+	// Loop through books and find one with the id from the params
+
+	for _, user := range users {
+		for _, pet := range *user.Pets {
+			if strconv.Itoa(pet.Id) == params["id"] {
+				json.NewEncoder(w).Encode(pet)
+				return
+			}
+		}
+	}
+	json.NewEncoder(w).Encode(&User{})
+}
+*/
+
+func getPet(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
+	//w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+
+	params := mux.Vars(r) // Gets params
+	// Loop through books and find one with the id from the params
+
+	for _, pet := range pets {
+		if strconv.Itoa(pet.Id) == params["id"] {
+			json.NewEncoder(w).Encode(pet)
+			return
+		}
+	}
+	json.NewEncoder(w).Encode(&User{})
+}
+
+func updatePet(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
+	w.Header().Set("Access-Control-Allow-Methods", "PUT, POST, GET, OPTIONS, DELETE")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token")
+	w.Header().Set("Access-Control-Allow-Credentials", "true") // Required for cookies, authorization headers with HTTPS
+
+	params := mux.Vars(r)
+	for index, pet := range pets {
+		if strconv.Itoa(pet.Id) == params["id"] {
+			pets = append(pets[:index], pets[index+1:]...)
+			var pet Pet
+			_ = json.NewDecoder(r.Body).Decode(&pet)
+
+			var err error
+			pet.Id, err = strconv.Atoi(params["id"])
+			if err == nil {
+				pets = append(pets, pet)
+				json.NewEncoder(w).Encode(pet)
+			}
+			return
+		}
+	}
+}
+
+// Add new pet
+func createPet(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+
+	var pet Pet
+	_ = json.NewDecoder(r.Body).Decode(&pet)
+	pet.Id = rand.Intn(100000000) // Mock ID - not safe //@TODO: Change for GUID
+	pets = append(pets, pet)
+	json.NewEncoder(w).Encode(pet)
 }
 
 // Main function
@@ -261,6 +370,8 @@ func main() {
 	pets_user1 = append(pets_user1, Pet{Id: 2, OwnerId: 1, Type: "crocodile", Name: "Антон", Sex: "male", Age: 35})
 	pets_user2 = append(pets_user2, Pet{Id: 3, OwnerId: 2, Type: "indricotherium", Name: "Musinit", Sex: "male", Age: 10})
 
+	pets = append(pets, pets_user0[0], pets_user0[1], pets_user1[0], pets_user2[0])
+
 	users = append(users, User{Id: 0, Name: "Ицхак", Surname: "Пинтосевич", Phone: "+79123456789", Email: "test@mail.ru", Address: &address_user0, Pets: &pets_user0})
 	users = append(users, User{Id: 1, Name: "Александр", Surname: "Тестовый", Phone: "+79150554477", Pets: &pets_user1})
 	users = append(users, User{Id: 2, Name: "Oleg", Surname: "Musin", Phone: "+79150554477", Address: &address_user2, Pets: &pets_user2})
@@ -277,7 +388,12 @@ func main() {
 	r.HandleFunc("/users", createUser).Methods("POST")
 	r.HandleFunc("/users/{id}", updateUser).Methods("PUT")
 	r.HandleFunc("/users/{id}", deleteUser).Methods("DELETE")
-	r.HandleFunc("/pets/{userId}", getPets).Methods("GET")
+
+	r.HandleFunc("/pets/user/{userId}", getUserPets).Methods("GET")
+	r.HandleFunc("/pets/{id}", getPet).Methods("GET")
+	r.HandleFunc("/pets", getPets).Methods("GET")
+	r.HandleFunc("/pets/{id}", updatePet).Methods("PUT")
+	r.HandleFunc("/pets", createPet).Methods("POST")
 
 	//Print port info
 	//fmt.Printf("sobaken-vigulyaken starting on port: %s...", port)
