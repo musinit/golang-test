@@ -210,7 +210,7 @@ func deleteUser(w http.ResponseWriter, r *http.Request) {
 
 	params := mux.Vars(r)
 	for index, item := range users {
-		if strconv.Itoa(item.Id) == params["Id"] {
+		if strconv.Itoa(item.Id) == params["id"] {
 			users = append(users[:index], users[index+1:]...)
 			break
 		}
@@ -342,6 +342,22 @@ func createPet(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(pet)
 }
 
+// Delete pet
+func deletePet(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+
+	params := mux.Vars(r)
+	for index, item := range pets {
+		if strconv.Itoa(item.Id) == params["id"] {
+			pets = append(pets[:index], pets[index+1:]...)
+			break
+		}
+	}
+	json.NewEncoder(w).Encode(pets) //@подумать надо ли это возвращать
+}
+
 // Main function
 func main() {
 	// Init router
@@ -394,6 +410,7 @@ func main() {
 	r.HandleFunc("/pets", getPets).Methods("GET")
 	r.HandleFunc("/pets/{id}", updatePet).Methods("PUT")
 	r.HandleFunc("/pets", createPet).Methods("POST")
+	r.HandleFunc("/pets/{id}", deletePet).Methods("DELETE")
 
 	//Print port info
 	//fmt.Printf("sobaken-vigulyaken starting on port: %s...", port)
