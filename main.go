@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
 
@@ -28,14 +29,15 @@ type Author struct {
 
 // User struct
 type User struct {
-	Id      int      `json:"id"`
-	Name    string   `json:"name"`
-	Surname string   `json:"surname"`
-	Phone   string   `json:"phone"`
-	Email   string   `json:"email"`
-	Address *Address `json:"address"`
-	Pets    *[]Pet   `json:"pets"`
-	PetIds  []int    `json:"petIds"`
+	Id      int       `json:"id"`
+	NewId   uuid.UUID `json:"newId"`
+	Name    string    `json:"name"`
+	Surname string    `json:"surname"`
+	Phone   string    `json:"phone"`
+	Email   string    `json:"email"`
+	Address *Address  `json:"address"`
+	Pets    *[]Pet    `json:"pets"`
+	PetIds  []int     `json:"petIds"`
 }
 
 // Address struct
@@ -52,25 +54,31 @@ type Address struct {
 
 // Pet struct
 type Pet struct {
-	Id      int    `json:"id"`
-	OwnerId int    `json:"ownerId"`
-	Type    string `json:"type"`
-	Name    string `json:"name"`
-	Sex     string `json:"sex"`
-	Age     int    `json:"age"`
+	Id       int    `json:"id"`
+	OwnerId  int    `json:"ownerId"`
+	Type     string `json:"type"`
+	Name     string `json:"name"`
+	Sex      string `json:"sex"`
+	Age      int    `json:"age"` //@TODO считать самому на основе birthday
+	Breed    string `json:"breed"`
+	Birthday string `json:"birthday"`
 }
 
-// Init books var as a slice Book struct
-var books []Book
+type Password struct {
+	UserId int `json:"userId"`
+	//Login    string `json:"login"`
+	Password string `json:"password"`
+	//Hash
+}
 
-// Init users var as a slice User struct
 var users []User
-
-// Init users var as a slice Pet struct
 var pets []Pet
+var passwords []Password
 
 //var addresses []Address
-//var pets []Pet
+
+/*
+var books []Book
 
 // Get all books
 func getBooks(w http.ResponseWriter, r *http.Request) {
@@ -137,6 +145,7 @@ func deleteBook(w http.ResponseWriter, r *http.Request) {
 	}
 	json.NewEncoder(w).Encode(books)
 }
+*/
 
 // Get all users
 func getUsers(w http.ResponseWriter, r *http.Request) {
@@ -164,16 +173,77 @@ func getUser(w http.ResponseWriter, r *http.Request) {
 }
 
 // Add new user
+/*
 func createUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
 	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 
 	var user User
+
 	_ = json.NewDecoder(r.Body).Decode(&user)
 	user.Id = rand.Intn(100000000) // Mock ID - not safe //@TODO: Change for GUID
 	users = append(users, user)
-	json.NewEncoder(w).Encode(user)
+	json.NewEncoder(w).Encode(user.Id)
+}
+*/
+
+func createUser(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+
+	type Tmp struct {
+		Name     string `json:"name"`
+		Phone    string `json:"phone"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+
+	var tmp Tmp
+	_ = json.NewDecoder(r.Body).Decode(&tmp)
+
+	var user User
+	user.Name = tmp.Name
+	user.Phone = tmp.Phone
+	user.Email = tmp.Email
+	user.Id = rand.Intn(100000000) // Mock ID - not safe //@TODO: Change for GUID
+	user.NewId = uuid.New()
+
+	users = append(users, user)
+	passwords = append(passwords, Password{UserId: user.Id, Password: tmp.Password})
+	prettyPrintSomething()
+
+	json.NewEncoder(w).Encode(user.Id)
+}
+
+func createUserNew(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+
+	type Tmp struct {
+		Name     string `json:"name"`
+		Phone    string `json:"phone"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+
+	var tmp Tmp
+	_ = json.NewDecoder(r.Body).Decode(&tmp)
+
+	var user User
+	user.Name = tmp.Name
+	user.Phone = tmp.Phone
+	user.Email = tmp.Email
+	user.Id = rand.Intn(100000000) // Mock ID - not safe //@TODO: Change for GUID
+	user.NewId = uuid.New()
+
+	users = append(users, user)
+	passwords = append(passwords, Password{UserId: user.Id, Password: tmp.Password})
+	prettyPrintSomething()
+
+	json.NewEncoder(w).Encode(user.NewId)
 }
 
 // Update user
@@ -358,6 +428,64 @@ func deletePet(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(pets) //@подумать надо ли это возвращать
 }
 
+/*
+func authorizeUser(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
+
+	params := mux.Vars(r) // Gets params
+
+	for _, password := range passwords {
+		if strconv.Itoa(password.UserId) == params["login"] {
+			if password.Password == params["password"] {
+				json.NewEncoder(w).Encode(password.UserId)
+				return
+			} else {
+				break
+			}
+
+		}
+	}
+	json.NewEncoder(w).Encode(nil)
+}
+*/
+
+func authorizeUser(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
+
+	params := mux.Vars(r) // Gets params
+
+	for _, user := range users {
+		if user.Phone == params["login"] {
+			for _, password := range passwords {
+				if password.UserId == user.Id {
+					if password.Password == params["password"] {
+						json.NewEncoder(w).Encode(user.Id)
+						return
+					} else {
+						break
+					}
+
+				}
+			}
+		}
+	}
+	http.Error(w, "Authorization unsuccessful", http.StatusForbidden)
+	// or using the default message error
+	//http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+
+	//json.NewEncoder(w).Encode(nil)
+}
+
+func prettyPrintSomething() {
+	prettyJSON, err := json.MarshalIndent(passwords, "", "    ")
+	if err != nil {
+		log.Fatal("Failed to generate json", err)
+	}
+	fmt.Printf("%s\n", string(prettyJSON))
+}
+
 // Main function
 func main() {
 	// Init router
@@ -368,8 +496,8 @@ func main() {
 	}
 
 	// Hardcoded data - @todo: add database
-	books = append(books, Book{ID: "1", Isbn: "438227", Title: "Book One", Author: &Author{Firstname: "John", Lastname: "Doe"}})
-	books = append(books, Book{ID: "2", Isbn: "454555", Title: "Book Two", Author: &Author{Firstname: "Steve", Lastname: "Smith"}})
+	//books = append(books, Book{ID: "1", Isbn: "438227", Title: "Book One", Author: &Author{Firstname: "John", Lastname: "Doe"}})
+	//books = append(books, Book{ID: "2", Isbn: "454555", Title: "Book Two", Author: &Author{Firstname: "Steve", Lastname: "Smith"}})
 
 	// Hardcoded data
 	//var address_user0 Address
@@ -382,22 +510,26 @@ func main() {
 	address_user2 := Address{Id: 1, OwnerId: 2, Country: "Russia", City: "Moscow", Street: "Tverskaya", House: "420", Flat: "69"}
 
 	pets_user0 = append(pets_user0, Pet{Id: 0, OwnerId: 0, Type: "cat", Name: "Владимир", Sex: "male", Age: 1})
-	pets_user0 = append(pets_user0, Pet{Id: 1, OwnerId: 0, Type: "dog", Name: "Джереми", Sex: "male", Age: 4})
+	pets_user0 = append(pets_user0, Pet{Id: 1, OwnerId: 0, Type: "dog", Name: "Джереми", Sex: "male", Age: 4, Breed: "Алабай", Birthday: "2010-04-10"})
 	pets_user1 = append(pets_user1, Pet{Id: 2, OwnerId: 1, Type: "crocodile", Name: "Антон", Sex: "male", Age: 35})
 	pets_user2 = append(pets_user2, Pet{Id: 3, OwnerId: 2, Type: "indricotherium", Name: "Musinit", Sex: "male", Age: 10})
 
 	pets = append(pets, pets_user0[0], pets_user0[1], pets_user1[0], pets_user2[0])
 
-	users = append(users, User{Id: 0, Name: "Ицхак", Surname: "Пинтосевич", Phone: "+79123456789", Email: "test@mail.ru", Address: &address_user0, Pets: &pets_user0})
-	users = append(users, User{Id: 1, Name: "Александр", Surname: "Тестовый", Phone: "+79150554477", Pets: &pets_user1})
-	users = append(users, User{Id: 2, Name: "Oleg", Surname: "Musin", Phone: "+79150554477", Address: &address_user2, Pets: &pets_user2})
+	users = append(users, User{Id: 0, Name: "Ицхак", Surname: "Пинтосевич", Phone: "79000000000", Email: "test@mail.ru", Address: &address_user0, Pets: &pets_user0})
+	users = append(users, User{Id: 1, Name: "Александр", Surname: "Тестовый", Phone: "79111111111", Pets: &pets_user1})
+	users = append(users, User{Id: 2, Name: "Oleg", Surname: "Musin", Phone: "79222222222", Address: &address_user2, Pets: &pets_user2})
+
+	passwords = append(passwords, Password{UserId: 0, Password: "zero"}, Password{UserId: 1, Password: "one"}, Password{UserId: 2, Password: "two"})
 
 	// Route handles & endpoints
-	r.HandleFunc("/books", getBooks).Methods("GET")
-	r.HandleFunc("/books/{id}", getBook).Methods("GET")
-	r.HandleFunc("/books", createBook).Methods("POST")
-	r.HandleFunc("/books/{id}", updateBook).Methods("PUT")
-	r.HandleFunc("/books/{id}", deleteBook).Methods("DELETE")
+	/*
+		r.HandleFunc("/books", getBooks).Methods("GET")
+		r.HandleFunc("/books/{id}", getBook).Methods("GET")
+		r.HandleFunc("/books", createBook).Methods("POST")
+		r.HandleFunc("/books/{id}", updateBook).Methods("PUT")
+		r.HandleFunc("/books/{id}", deleteBook).Methods("DELETE")
+	*/
 
 	r.HandleFunc("/users", getUsers).Methods("GET")
 	r.HandleFunc("/users/{id}", getUser).Methods("GET")
@@ -411,6 +543,9 @@ func main() {
 	r.HandleFunc("/pets/{id}", updatePet).Methods("PUT")
 	r.HandleFunc("/pets", createPet).Methods("POST")
 	r.HandleFunc("/pets/{id}", deletePet).Methods("DELETE")
+
+	r.HandleFunc("/auth/", authorizeUser).
+		Queries("login", "{login}", "password", "{password}").Methods("GET")
 
 	//Print port info
 	//fmt.Printf("sobaken-vigulyaken starting on port: %s...", port)
