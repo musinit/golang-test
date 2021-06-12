@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"golang-test/db"
+	"golang-test/repository"
 	"log"
 	"math/rand"
 	"net/http"
@@ -332,10 +334,10 @@ func deleteBook(w http.ResponseWriter, r *http.Request) {
 */
 
 // Get all users
-func getUsers(w http.ResponseWriter, r *http.Request) {
+func (handler *Handler) getUsers(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
-
+	users, _ := handler.UserRepository.GetAllUsers()
 	json.NewEncoder(w).Encode(users)
 }
 
@@ -454,33 +456,14 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 }
 
 //@TODO: проверка на наличие мобильного телефона в базе
-func createUserNew(w http.ResponseWriter, r *http.Request) {
+func (handler *Handler) createUserNew(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
 	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 
-	type Tmp struct {
-		Name     string `json:"name"`
-		Phone    string `json:"phone"`
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
+	// Get user here from body
 
-	var tmp Tmp
-	_ = json.NewDecoder(r.Body).Decode(&tmp)
-
-	var user User
-	user.Name = tmp.Name
-	user.Phone = tmp.Phone
-	user.Email = tmp.Email
-	user.Id = rand.Intn(100000000) // Mock ID - not safe //@TODO: Change for GUID
-	user.NewId = uuid.New()
-
-	users = append(users, user)
-	passwords = append(passwords, Password{UserId: user.Id, Password: tmp.Password})
-	prettyPrintSomething()
-
-	json.NewEncoder(w).Encode(user.NewId)
+	json.NewEncoder(w).Encode("created!")
 }
 
 // Update user
@@ -1025,6 +1008,12 @@ func main() {
 		port = "8000"
 	}
 
+	db, err := db.SetDB()
+	if err != nil {
+		panic("pizda")
+	}
+	userRepository := repository.UserRepository{db}
+
 	// Hardcoded data - @todo: add database
 	//books = append(books, Book{ID: "1", Isbn: "438227", Title: "Book One", Author: &Author{Firstname: "John", Lastname: "Doe"}})
 	//books = append(books, Book{ID: "2", Isbn: "454555", Title: "Book Two", Author: &Author{Firstname: "Steve", Lastname: "Smith"}})
@@ -1085,12 +1074,13 @@ func main() {
 		r.HandleFunc("/books/{id}", updateBook).Methods("PUT")
 		r.HandleFunc("/books/{id}", deleteBook).Methods("DELETE")
 	*/
+	handler := Handler{UserRepository: userRepository}
 
-	r.HandleFunc("/users", getUsers).Methods("GET")
+	r.HandleFunc("/users", handler.getUsers).Methods("GET")
 	r.HandleFunc("/users/{id}", getUser).Methods("GET")
 	r.HandleFunc("/users/new/{id}", getUserNew).Methods("GET")
 	r.HandleFunc("/users", createUser).Methods("POST")
-	r.HandleFunc("/users/new", createUserNew).Methods("POST")
+	r.HandleFunc("/users/new", handler.createUserNew).Methods("POST")
 	r.HandleFunc("/users/{id}", updateUser).Methods("PUT")
 	r.HandleFunc("/users/new/{id}", updateUserNew).Methods("PUT")
 	r.HandleFunc("/users/{id}", deleteUser).Methods("DELETE")
@@ -1132,6 +1122,7 @@ func main() {
 	*/
 
 	// Start server
+	fmt.Println("server started")
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), r))
 }
 
@@ -1153,3 +1144,7 @@ func main() {
     "pets": null
 }
 */
+
+type Handler struct {
+	UserRepository repository.UserRepository
+}

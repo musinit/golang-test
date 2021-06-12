@@ -1,0 +1,5 @@
+default:
+  dialect: postgres
+  datasource: host=ec2-54-73-68-39.eu-west-1.compute.amazonaws.com dbname=d4143he11vfch2 user=amqjqcvlywltns password=49b3cea25bb797e1e7cc4884702d6e7e08558f08e9ffc49cc086a8aecd6c219c
+  dir: migrations
+  table: migrations
