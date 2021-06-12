@@ -33,15 +33,15 @@ type Author struct {
 
 // User struct
 type User struct {
-	Id      int       `json:"id"`
-	NewId   uuid.UUID `json:"newId"`
-	Name    string    `json:"name"`
-	Surname string    `json:"surname"`
-	Phone   string    `json:"phone"`
-	Email   string    `json:"email"`
-	Address *Address  `json:"address"`
-	Pets    *[]Pet    `json:"pets"`
-	PetIds  []int     `json:"petIds"`
+	Id      int         `json:"id"`
+	NewId   uuid.UUID   `json:"newId"`
+	Name    string      `json:"name"`
+	Surname string      `json:"surname"`
+	Phone   string      `json:"phone"`
+	Email   string      `json:"email"`
+	Address *Address    `json:"address"`
+	Pets    *[]Pet      `json:"pets"`
+	PetIds  []uuid.UUID `json:"petIds"` //подумать, надо ли вообще
 }
 
 // Address struct
@@ -152,6 +152,7 @@ var usersOrders []UsersOrders
 //@TODO: заказ на несколько питомцев
 type Order struct {
 	Id           uuid.UUID   `json:"id"`
+	Number       int         `json:"number"`
 	UserId       uuid.UUID   `json:"userId"`
 	PetId        uuid.UUID   `json:"petId"`
 	ExecutorId   uuid.UUID   `json:"executorId"`
@@ -167,6 +168,7 @@ type Order struct {
 var orders = []Order{
 	{
 		Id:           uuid.Must(uuid.Parse("1a8c5856-38f0-4f7f-a689-52469bddbf9e")),
+		Number:       1,
 		UserId:       uuid.Must(uuid.Parse("6ba7b810-9dad-11d1-80b4-00c04fd430c8")),
 		PetId:        uuid.Must(uuid.Parse("367c7a83-3f7e-4870-ace0-aabdec0fe18e")),
 		ExecutorId:   uuid.Must(uuid.Parse("162f9de7-3b3f-49a1-81eb-3d65f4048b84")),
@@ -179,6 +181,7 @@ var orders = []Order{
 	},
 	{
 		Id:           uuid.Must(uuid.Parse("4a933b9e-a2e7-47a7-8bbb-e19bf162e23f")),
+		Number:       2,
 		UserId:       uuid.Must(uuid.Parse("6ba7b810-9dad-11d1-80b4-00c04fd430c8")),
 		PetId:        uuid.Must(uuid.Parse("367c7a83-3f7e-4870-ace0-aabdec0fe18e")),
 		ExecutorId:   uuid.Must(uuid.Parse("162f9de7-3b3f-49a1-81eb-3d65f4048b84")),
@@ -191,6 +194,7 @@ var orders = []Order{
 	},
 	{
 		Id:           uuid.Must(uuid.Parse("02122c6a-b517-4998-8e28-39089006188f")),
+		Number:       3,
 		UserId:       uuid.Must(uuid.Parse("6ba7b810-9dad-11d1-80b4-00c04fd430c8")),
 		PetId:        uuid.Must(uuid.Parse("367c7a83-3f7e-4870-ace0-aabdec0fe18e")),
 		ExecutorId:   uuid.Must(uuid.Parse("162f9de7-3b3f-49a1-81eb-3d65f4048b84")),
@@ -203,6 +207,7 @@ var orders = []Order{
 	},
 	{
 		Id:           uuid.Must(uuid.Parse("4f04bd63-01f7-4671-ac74-dcd83ec3ed43")),
+		Number:       4,
 		UserId:       uuid.Must(uuid.Parse("6ba7b810-9dad-11d1-80b4-00c04fd430c8")),
 		PetId:        uuid.Must(uuid.Parse("c3d25bae-bd8a-4a61-83ea-59084ec332a8")),
 		ExecutorId:   uuid.Must(uuid.Parse("162f9de7-3b3f-49a1-81eb-3d65f4048b84")),
@@ -236,6 +241,13 @@ func (os OrderStatus) String() string {
 // EnumIndex - Creating common behavior - give the type a EnumIndex function
 func (os OrderStatus) EnumIndex() int {
 	return int(os)
+}
+
+var lastOrderNumber = 4 //set to zero after all //get from database when application restarts
+
+func getNewOrderNumberAndIncrement() int {
+	lastOrderNumber = lastOrderNumber + 1
+	return lastOrderNumber
 }
 
 /*
@@ -328,6 +340,7 @@ func getUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 // Get single user
+
 func getUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
@@ -345,13 +358,13 @@ func getUser(w http.ResponseWriter, r *http.Request) {
 }
 
 // Get single user
+/*
 func getUserNew(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
 	//w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 
-	params := mux.Vars(r) // Gets params
-	// Loop through books and find one with the id from the params
+	params := mux.Vars(r)
 	for _, user := range users {
 		if user.NewId == uuid.Must(uuid.Parse(params["id"])) {
 			json.NewEncoder(w).Encode(user)
@@ -359,6 +372,40 @@ func getUserNew(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	json.NewEncoder(w).Encode(&User{})
+}
+*/
+
+func getUserNew(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
+	//w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+
+	params := mux.Vars(r)
+
+	var err error
+	var _id uuid.UUID
+	_id, err = uuid.Parse(params["id"])
+
+	if err != nil {
+		http.Error(w, "Wrong parameter format", http.StatusBadRequest)
+		return
+	}
+
+	var _user User
+	for _, user := range users {
+		if user.NewId == _id {
+			_user = user
+			var _pets []Pet
+			for _, pet := range pets {
+				if pet.NewOwnerId == _id {
+					_pets = append(_pets, pet)
+				}
+			}
+			_user.Pets = &_pets
+			break
+		}
+	}
+	json.NewEncoder(w).Encode(_user)
 }
 
 // Add new user
@@ -634,6 +681,7 @@ func updatePet(w http.ResponseWriter, r *http.Request) {
 }
 
 // Add new pet
+//TODO: не создавать пустые записи, если body в запросе кривой
 func createPet(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
@@ -815,7 +863,7 @@ func getUserOrders(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
 	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 
-	params := mux.Vars(r) // Gets params
+	params := mux.Vars(r)
 
 	var err error
 	var userId uuid.UUID
@@ -825,6 +873,7 @@ func getUserOrders(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Wrong parameter format", http.StatusBadRequest)
 		return
 	}
+
 	var thisUserOrders []Order
 	for _, order := range orders {
 		if order.UserId == userId {
@@ -875,6 +924,7 @@ func createOrder(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewDecoder(r.Body).Decode(&order)
 
 	order.Id = uuid.New()
+	order.Number = getNewOrderNumberAndIncrement()
 	order.CreatedAt = time.Now().Format(time.RFC3339)
 	order.UpdatedAt = order.CreatedAt
 	order.Status = Pending
@@ -986,6 +1036,10 @@ func main() {
 	var pets_user1 []Pet
 	var pets_user2 []Pet
 
+	var pets_user0_ids []uuid.UUID
+	var pets_user1_ids []uuid.UUID
+	var pets_user2_ids []uuid.UUID
+
 	address_user0 := Address{Id: 0, OwnerId: 0, Country: "Россия", City: "Москва", Street: "Петушиная", House: "69", Flat: "420"}
 	address_user2 := Address{Id: 1, OwnerId: 2, Country: "Russia", City: "Moscow", Street: "Tverskaya", House: "420", Flat: "69"}
 
@@ -994,11 +1048,21 @@ func main() {
 	pets_user1 = append(pets_user1, Pet{Id: 2, OwnerId: 1, NewId: uuid.Must(uuid.Parse("7e58091e-3736-49ab-b502-7cb3314bbe21")), NewOwnerId: uuid.Must(uuid.Parse("4b69a783-65d4-4bba-adc7-8935f22c1fc6")), Type: "crocodile", Name: "Антон", Sex: "male", Age: 35})
 	pets_user2 = append(pets_user2, Pet{Id: 3, OwnerId: 2, NewId: uuid.Must(uuid.Parse("6f8cb018-1afd-412b-86c0-a83d3b3c47bd")), NewOwnerId: uuid.Must(uuid.Parse("52a226aa-9ee1-4ba1-a053-c67eeff55366")), Type: "indricotherium", Name: "Musinit", Sex: "male", Age: 10})
 
+	pets_user0_ids = append(pets_user0_ids, uuid.Must(uuid.Parse("367c7a83-3f7e-4870-ace0-aabdec0fe18e")), uuid.Must(uuid.Parse("c3d25bae-bd8a-4a61-83ea-59084ec332a8")))
+	pets_user1_ids = append(pets_user1_ids, uuid.Must(uuid.Parse("7e58091e-3736-49ab-b502-7cb3314bbe21")))
+	pets_user2_ids = append(pets_user2_ids, uuid.Must(uuid.Parse("6f8cb018-1afd-412b-86c0-a83d3b3c47bd")))
+
 	pets = append(pets, pets_user0[0], pets_user0[1], pets_user1[0], pets_user2[0])
 
-	users = append(users, User{Id: 0, NewId: uuid.Must(uuid.Parse("6ba7b810-9dad-11d1-80b4-00c04fd430c8")), Name: "Ицхак", Surname: "Пинтосевич", Phone: "79000000000", Email: "test@mail.ru", Address: &address_user0, Pets: &pets_user0})
-	users = append(users, User{Id: 1, NewId: uuid.Must(uuid.Parse("4b69a783-65d4-4bba-adc7-8935f22c1fc6")), Name: "Александр", Surname: "Тестовый", Phone: "79111111111", Pets: &pets_user1})
-	users = append(users, User{Id: 2, NewId: uuid.Must(uuid.Parse("52a226aa-9ee1-4ba1-a053-c67eeff55366")), Name: "Oleg", Surname: "Musin", Phone: "79222222222", Address: &address_user2, Pets: &pets_user2})
+	/*
+		users = append(users, User{Id: 0, NewId: uuid.Must(uuid.Parse("6ba7b810-9dad-11d1-80b4-00c04fd430c8")), Name: "Ицхак", Surname: "Пинтосевич", Phone: "79000000000", Email: "test@mail.ru", Address: &address_user0, Pets: &pets_user0, PetIds: pets_user0_ids})
+		users = append(users, User{Id: 1, NewId: uuid.Must(uuid.Parse("4b69a783-65d4-4bba-adc7-8935f22c1fc6")), Name: "Александр", Surname: "Тестовый", Phone: "79111111111", Pets: &pets_user1, PetIds: pets_user1_ids})
+		users = append(users, User{Id: 2, NewId: uuid.Must(uuid.Parse("52a226aa-9ee1-4ba1-a053-c67eeff55366")), Name: "Oleg", Surname: "Musin", Phone: "79222222222", Address: &address_user2, Pets: &pets_user2, PetIds: pets_user2_ids})
+	*/
+
+	users = append(users, User{Id: 0, NewId: uuid.Must(uuid.Parse("6ba7b810-9dad-11d1-80b4-00c04fd430c8")), Name: "Ицхак", Surname: "Пинтосевич", Phone: "79000000000", Email: "test@mail.ru", Address: &address_user0, PetIds: pets_user0_ids})
+	users = append(users, User{Id: 1, NewId: uuid.Must(uuid.Parse("4b69a783-65d4-4bba-adc7-8935f22c1fc6")), Name: "Александр", Surname: "Тестовый", Phone: "79111111111", PetIds: pets_user1_ids})
+	users = append(users, User{Id: 2, NewId: uuid.Must(uuid.Parse("52a226aa-9ee1-4ba1-a053-c67eeff55366")), Name: "Oleg", Surname: "Musin", Phone: "79222222222", Address: &address_user2, PetIds: pets_user2_ids})
 
 	passwords = append(
 		passwords,
