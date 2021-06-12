@@ -88,8 +88,8 @@ type Service struct {
 	Name          string    `json:"name"`
 	Description   string    `json:"description"`
 	PriceInfo     string    `json:"priceInfo"`
-	IsVisible     bool      `json:"isVisible"`
-	OrderPosition int       `json:"orderPosition"`
+	IsVisible     bool      `json:"isVisible"`     //TODO: do not return false values
+	OrderPosition int       `json:"orderPosition"` //TODO: return in corresponding order
 }
 
 var services = []Service{
@@ -486,6 +486,7 @@ func updateUserNew(w http.ResponseWriter, r *http.Request) {
 }
 
 // Delete user
+//Do not actually delete, set flag to deleted=true
 func deleteUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
@@ -648,6 +649,7 @@ func createPet(w http.ResponseWriter, r *http.Request) {
 }
 
 // Delete pet
+//Do not actually delete, set flag to deleted=true
 func deletePet(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
@@ -928,6 +930,7 @@ func updateOrder(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+//Do not actually delete, set flag to deleted=true
 func deleteOrder(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*") // Required for CORS support to work
